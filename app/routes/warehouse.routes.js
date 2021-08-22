@@ -10,10 +10,16 @@ module.exports = (app) => {
         })
     });
 
-    // The REST Verb determines the action to perform; GET, POST, PUT, DELETE.
-    // ":id" - PATH PARAMETERS used to identify an entity to perform an action against.
-    // "?key=value" - QUERY PARAMETERS can be used to provide additional information for these actions.
-    // "/" - If no Path Parameter is provided, the API will read the REQUEST BODY to determine useful values.
+    // TODO: COMMENT WITH SOURCES
+    // WIP: Have moved the client! now update all controllers and tests to use it!
+    // DISTRACT WITH: Update warehouse/unique files with detailed tech commentary
+    // NEXT: TEST BINLOCATION vs STOCKITEM relationship database!!
+    // ALSO: DRILL DOWN?
+    //   /api/warehouses/<thisOne>/binlocations/....
+    //   /api/warehouses/<thisOne>/binlocations/<thisOne>/StockItems/.....
+    //   /api/warehouses/<thisOne>/binlocations/<thisOne>/StockItems/<thisOne>
+    // PENULTIMATELY: New endpoints to create movements? aaaaand tests for those :(
+    // FINALLY: GET GITHUB CI running.. ooo
 
     /* TODO: DOCUMENTATION
         *
@@ -39,6 +45,11 @@ module.exports = (app) => {
         *
      */
 
+    // The REST Verb determines the action to perform; GET, POST, PUT, DELETE.
+    // ":id" - PATH PARAMETERS used to identify an entity to perform an action against.
+    // "?key=value" - QUERY PARAMETERS can be used to provide additional information for these actions.
+    // "/" - If no Path Parameter is provided, the API will read the REQUEST BODY to determine useful values.
+
     // RETRIEVE
     router.get('/', warehouseController.getWarehouseFromBody);
     router.get('/:id', warehouseController.getWarehouseFromParams);
@@ -54,11 +65,6 @@ module.exports = (app) => {
     // DELETE
     router.delete('/', warehouseController.deleteWarehouseFromBody);
     router.delete('/:id', warehouseController.deleteWarehouseFromParams);
-
-    // TODO: DRILL DOWN
-    //   /api/warehouses/<thisOne>/binlocations/....
-    //   /api/warehouses/<thisOne>/binlocations/<thisOne>/StockItems/.....
-    //   /api/warehouses/<thisOne>/binlocations/<thisOne>/StockItems/<thisOne>
 
     app.use('/api/warehouses', router);
 }

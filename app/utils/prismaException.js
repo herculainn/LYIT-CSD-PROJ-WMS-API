@@ -33,12 +33,16 @@ const httpStatus = (e) => {
 
     if (e) {
 
-        if (e.constructor.name === 'PrismaClientValidationError') return 400; // 'Bad Request'
-        if (e.constructor.name === 'NotFoundError') return 404; // 'Not Found'
+        // using includes() as some types have version revision after the name
+        if (e.constructor.name.includes('PrismaClientValidationError')) return 400; // 'Bad Request'
+
+        if (e.constructor.name.includes('NotFoundError')) return 404; // 'Not Found'
+
+        if (e.constructor.name.includes('PrismaClientKnownRequestError3')) {
+            if (e.code === 'P2025') return 404; // 'Not Found'
+        }
 
         // Other Prisma Error Types
-        // if (e instanceOf PrismaClientValidationError) /* something */;
-        // PrismaClientKnownRequestError - contains code property for further information
         // PrismaClientUnknownRequestError
         // PrismaClientRustPanicError
         // PrismaClientInitializationError

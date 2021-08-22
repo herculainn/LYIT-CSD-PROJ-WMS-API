@@ -1,5 +1,15 @@
+// Initialise the Prisma Client if it hasn't already been (.. by test script)
+const prisma = require('./client').prismaClient({
+    caller: "index.js",
+    db: {
+        url: process.env.DATABASE_URL
+    }
+});
+
 const express = require("express");
 const app = express();
+
+// TODO: COMMENT WITH SOURCES
 
 // MIDDLEWARE
 // Must be in order of execution
@@ -19,9 +29,8 @@ require('./app/routes/binlocation.routes')(app);
 require('./app/routes/stockItem.routes')(app);
 
 // Start the server!
-const port = process.env.PORT || "3000";
-app.listen(port, () => {
-    console.log(`Server Running at http://localhost:${port}`);
+app.listen(process.env.PORT, () => {
+    console.log(`Server Running on ${process.env.PORT}`);
 });
 
 // For testing

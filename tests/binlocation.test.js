@@ -10,7 +10,7 @@ require('../'); // Start the API server
 
 describe('API Test Endpoint: ./api/binlocations/', function() {
 
-    let testEndpoint = 'http://localhost:3000/api/binlocations/';
+    let testEndpoint = 'http://localhost:24326/api/binlocations/';
     let testBinLocation = JSON.parse(JSON.stringify(testEntities.binLocation.json));
     let testPutBinLocation;
 
@@ -58,7 +58,7 @@ describe('API Test Endpoint: ./api/binlocations/', function() {
 
             it('... created a new warehouse', async function () {
                 // TODO: Structure not great for unit test?
-                const response = await axios.get('http://localhost:3000/api/warehouses/' + testBinLocation.warehouseId);
+                const response = await axios.get('http://localhost:24326/api/warehouses/' + testBinLocation.warehouseId);
                 console.log(response.data);
 
                 assert.equal(response.data.description, testEntities.warehouse.json.description);
@@ -191,7 +191,7 @@ describe('API Test Endpoint: ./api/binlocations/', function() {
             });
 
             it('Warehouses persist', async function() {
-                const response = await axios.get('http://localhost:3000/api/warehouses/' + testBinLocation.warehouseId);
+                const response = await axios.get('http://localhost:24326/api/warehouses/' + testBinLocation.warehouseId);
                 console.log(response.data);
 
                 assert.equal(response.data.description, testEntities.warehouse.json.description);
@@ -199,7 +199,7 @@ describe('API Test Endpoint: ./api/binlocations/', function() {
 
             it('Delete the warehouse', async function () {
                 // TODO: this needs to be a cleanup not a test
-                const response = await axios.delete('http://localhost:3000/api/warehouses/', {
+                const response = await axios.delete('http://localhost:24326/api/warehouses/', {
                     data: {
                         id: testBinLocation.warehouseId
                     }

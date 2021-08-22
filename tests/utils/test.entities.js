@@ -1,29 +1,16 @@
 // This module contains classes of static entities for use during testing
 
-class warehouse {
-    static json = {
-        //id: -1
-        description: 'LYIT',
-        address1: 'Institiúid Teicneolaíochta Leitir Ceanainn',
-        addressCounty: 'Dhún na nGall',
-        addressCountry: 'Ireland',
-        postcode: 'F92FC93'
-    };
-    static correctPostcode = 'Éire';
-    static errorID = 9999999999;
-    static errorDescription = 'Testing cannot PUT this anywhere';
-    static correctDescription = 'Testing PUT this here';
-}
+// TODO: DELETE THIS MODULE!!
 
 class binLocation {
     static json = {
         //id: -1
         description: 'LYIT BinLocation',
-        aisle: "A1",
-        shelf: "4"
+        aisle: "AISLE0001",
+        shelf: "SHELF0001"
         //warehouse:{}
     };
-    static correctShelf = '2';
+    static correctShelf = 'SHELF0002';
     static errorID = 9999999999;
     static errorDescription = 'Testing cannot PUT this anywhere';
     static correctDescription = 'Testing PUT this here';
@@ -31,9 +18,9 @@ class binLocation {
 
 class stockItem {
     static json = {
-        description: 'LYIT StockItem',
-        ean: '012345678905',
-        upc: '0012345678905'
+        description: 'NVIDIA GeForce RTX 3080 Graphics Card',
+        ean: '0812674024509',
+        upc: '812674024509'
     };
     static correctEan = '210987654321';
     static correctUpc = '954231385444';
@@ -44,7 +31,6 @@ class stockItem {
 }
 
 module.exports = {
-    warehouse,
     binLocation,
     stockItem
 };

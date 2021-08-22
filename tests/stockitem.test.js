@@ -10,7 +10,7 @@ require('../'); // Start the API server
 
 describe('API Test Endpoint: ./api/stockitems/', function() {
 
-    let testEndpoint = 'http://localhost:3000/api/stockitems/';
+    let testEndpoint = 'http://localhost:24326/api/stockitems/';
     let testStockItem = JSON.parse(JSON.stringify(testEntities.stockItem.json));
     let testPutStockItem;
 
