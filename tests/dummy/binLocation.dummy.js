@@ -1,4 +1,4 @@
-const binLocations = [
+exports.binLocations = [
 
     {
         //id: -1
@@ -10,7 +10,7 @@ const binLocations = [
 
     {
         //id: -1
-        description: 'BinLocation 002.A',
+        description: 'BinLocation WH002.A',
         aisle: "A001",
         shelf: "S001"
         //warehouse:{}
@@ -18,7 +18,7 @@ const binLocations = [
 
     {
         //id: -1
-        description: 'BinLocation 002.B',
+        description: 'BinLocation WH002.B',
         aisle: "A002",
         shelf: "S001"
         //warehouse:{}
@@ -26,7 +26,7 @@ const binLocations = [
 
     {
         //id: -1
-        description: 'BinLocation 003.A',
+        description: 'BinLocation WH003.A',
         aisle: "A001",
         shelf: "S001"
         //warehouse:{}
@@ -34,5 +34,3 @@ const binLocations = [
 
 
 ];
-
-export default binLocations;

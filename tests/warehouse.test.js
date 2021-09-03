@@ -2,13 +2,12 @@ const assert = require('assert'); // For testing assertions
 const axios = require('axios'); // HTTP client
 const querystring = require("querystring"); // For generating/interpreting URLs
 
-// TODO: beforeEach will we need to do this on other tables? if testing nested elements?
+// Our own global functions that will be of use to all test units
+const testUtilities = require("./utils/test.utils");
+const utilities = require("../app/utils/utils");
 
 // A list of prebuilt warehouses in JSON for use during testing
-const dummyWarehouses = require('./dummy/warehouse.dummy').dummyWarehouses;
-
-// Our own global functions that will be of use to all test units
-const utilities = require("./utils/test.utils");
+const dummyWarehouses = require('./dummy/warehouse.dummy').warehouses;
 
 // This should be the first call to the client module, resulting in the prismaClient being instantiated
 // using the TEST database. This cachedClient will in turn be used by controllers via the REST API.
@@ -43,14 +42,16 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
 
         // !IMPORTANT we must be using a TEST database
         // Delete any existing records from the warehouse table
-        await prisma.warehouse.deleteMany({});
+        // Do this before running tests as we can't be sure a cleanup will be reached without exceptions.
+        // Must delete related records first; and so deletions are in order...
+        await testUtilities.cleanTables(prisma);
 
         // Now add the warehouses we intend to use for testing
         // https://www.prisma.io/docs/concepts/components/prisma-client/crud#create-multiple-records
         await prisma.warehouse.createMany({
             data: [
-                dummyWarehouses[0], // LYIT
-                dummyWarehouses[1]  // AMAZON DE
+                dummyWarehouses[0], // 'LYIT'
+                dummyWarehouses[1]  // 'AMAZON DE'
             ]
         });
     });
@@ -65,7 +66,7 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
             // Get all warehouses from the warehouse table
             const existingWarehouses = await prisma.warehouse.findMany({});
 
-            // Assert that only items exist
+            // Assert that only the expected number of items exist
             assert.equal(existingWarehouses.length, 2);
 
         });
@@ -96,7 +97,7 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
 
             // Each test defined by an it() function
             // These each also have a title to describe exactly what we expect IT to do.
-            // Ensuring each it() can does not rely on other tests means we can run then individually yoo
+            // Ensuring each it() does not rely on other tests means we can run them individually
             it('Cannot overwrite existing warehouse', async function() {
 
                 // Each unit test would typically try to follow the "Arrange Act Assert" pattern
@@ -111,13 +112,13 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
                 // and assign the ID from an existing record to the dummy warehouse
                 postWarehouse.id = existingWarehouses[0].id;
 
-                // Assert (read order switched): that this will throw an error ("status code 500")
-                await utilities.assertThrowsAsync(async () => {
+                // Assert (read order switched): that this will throw an error ("status code 400")
+                await testUtilities.assertThrowsAsync(async () => {
 
                     // Act: try to post a new record using the dummy warehouse and duplicated id
                     await axios.post(testEndpoint, postWarehouse);
 
-                }, /status code 500/);
+                }, /status code 400/);
 
             });
 
@@ -130,11 +131,11 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
                 const postWarehouse = utilities.cloneJSON(dummyWarehouses[2]);
 
                 // Act
-                const response = await axios.post(testEndpoint, postWarehouse);
+                const responseWarehouse = (await axios.post(testEndpoint, postWarehouse)).data;
 
                 // Assert
-                assert.equal(response.data.description, postWarehouse.description);
-                assert.equal(response.data.postcode, postWarehouse.postcode);
+                assert.equal(responseWarehouse.description, postWarehouse.description);
+                assert.equal(responseWarehouse.postcode, postWarehouse.postcode);
 
             });
 
@@ -151,7 +152,7 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
                 const putWarehouse = utilities.cloneJSON(dummyWarehouses[2]);
 
                 // Assert (read order switched): that this will throw an error ("status code 500")
-                await utilities.assertThrowsAsync(async () => {
+                await testUtilities.assertThrowsAsync(async () => {
 
                     // Act
                     await axios.put(testEndpoint, putWarehouse);
@@ -187,9 +188,7 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
             it('Creates new Warehouse if new id is used', async function () {
 
                 // Get a new ID for a new record
-                const newID = await utilities.getUniqueID(prisma.warehouse);
-
-                console.log(newID);
+                const newID = await testUtilities.getUniqueID(prisma.warehouse);
 
                 // Create a warehouse to attempt to put
                 let putWarehouse = utilities.cloneJSON(dummyWarehouses[2]);
@@ -214,46 +213,52 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
         describe('GET', function() {
 
             it('No parameters returns array of all warehouses', async function() {
+                // get the list of warehouses from the client
+                const existingWarehouses = await prisma.warehouse.findMany({});
 
-                const getWarehouse = await axios.get(testEndpoint);
+                // now get the same via the API using axios
+                const resWarehouses = (await axios.get(testEndpoint)).data;
 
-                assert.equal(getWarehouse.data.length, 2);
+                // both counts should be the same
+                assert.equal(resWarehouses.length, existingWarehouses.length);
 
             });
 
-            it('error if a string is provided as ID', async function() {
+            it('ID as a string is automatically converted', async function() {
 
                 // Arrange - retrieve posted warehouses for their ID
-                const existingWarehouseID = (await prisma.warehouse.findMany({}))[0].id;
+                const existingWarehouse = (await prisma.warehouse.findMany({}))[0]
+                const existingWarehouseID = existingWarehouse.id;
 
                 // result should be an array given the nature of the call
                 // See previous and the next test for multiple results
-                const getWarehouse = await axios.get(testEndpoint, {
+                const resWarehouse = (await axios.get(testEndpoint, {
                     data: {
                         id: existingWarehouseID.toString()
                     }
-                });
+                })).data;
 
-                assert.equal(getWarehouse.data.length, 1);
-                assert.equal(getWarehouse.data[0].description, dummyWarehouses[0].description);
+                assert.equal(resWarehouse.length, 1);
+                assert.equal(resWarehouse[0].description, existingWarehouse.description);
 
             });
 
             it('returns single Warehouses matching unique terms', async function() {
 
                 // Arrange - retrieve posted warehouses for their ID
-                const existingWarehouseID = (await prisma.warehouse.findMany({}))[0].id;
+                const existingWarehouse = (await prisma.warehouse.findMany({}))[0]
+                const existingWarehouseID = existingWarehouse.id;
 
                 // result should be an array given the nature of the call
                 // See previous and the next test for multiple results
-                const getWarehouse = await axios.get(testEndpoint, {
+                const resWarehouse = (await axios.get(testEndpoint, {
                     data: {
                         id: existingWarehouseID
                     }
-                });
+                })).data;
 
-                assert.equal(getWarehouse.data.length, 1);
-                assert.equal(getWarehouse.data[0].description, dummyWarehouses[0].description);
+                assert.equal(resWarehouse.length, 1);
+                assert.equal(resWarehouse[0].description, existingWarehouse.description);
 
             });
 
@@ -267,25 +272,24 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
                 });
 
                 // Act - should find one original and the new post
-                const getWarehouse = await axios.get(testEndpoint, {
+                const resWarehouse = (await axios.get(testEndpoint, {
                     data: {
                         address1: dummyWarehouses[0].address1
                     }
-                });
+                })).data;
 
-                assert.equal(getWarehouse.data.length, 2);
-                assert.equal(getWarehouse.data[0].address1, dummyWarehouses[0].address1);
-                assert.equal(getWarehouse.data[0].address1, getWarehouse.data[1].address1);
+                assert.equal(resWarehouse.length, 2);
+                assert.equal(resWarehouse[0].address1, dummyWarehouses[0].address1);
 
             });
 
             it('returns empty array if request body data has no matches', async function() {
 
-                const response = await axios.get(testEndpoint, {
+                const resWarehouse = (await axios.get(testEndpoint, {
                     data: { address3: 'not used' }
-                });
+                })).data;
 
-                assert.equal(response.data.length, 0);
+                assert.equal(resWarehouse.length, 0);
 
             });
 
@@ -296,21 +300,28 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
             it('deletes one record by id', async function() {
 
                 // Retrieve a warehouse that already exists
-                const existingWarehouse = (await prisma.warehouse.findMany({}))[0];
+                const existingWarehouses = await prisma.warehouse.findMany({});
+                const existingWarehouse = existingWarehouses[0];
 
                 // Kill it
-                const response = await axios.delete(testEndpoint, {
+                const response = (await axios.delete(testEndpoint, {
                     data: {
                         id: existingWarehouse.id
                     }
-                });
+                })).data;
+
+                // find how many are lest
+                const remainingWarehouses = await prisma.warehouse.findMany({});
 
                 // Assert that single record was deleted
-                assert.equal(response.data.count, 1);
+                assert.equal(response.count, 1);
+
+                // Assert that single record was deleted
+                assert.equal(remainingWarehouses.length, existingWarehouses.length - response.count);
 
                 // Also assert that we cannot find that record anymore
                 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
-                await utilities.assertThrowsAsync(async () => {
+                await testUtilities.assertThrowsAsync(async () => {
                     await prisma.warehouse.findUnique({
                         where: { id: existingWarehouse.id }
                     });
@@ -328,12 +339,12 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
                 });
 
                 // Kill them
-                const deletedWarehouseCount = await axios.delete(testEndpoint, {
+                const deletedWarehouseCount = (await axios.delete(testEndpoint, {
                     data: { address1: dummyWarehouses[0].address1 }
-                });
+                })).data;
 
                 // Assert that two records were deleted
-                assert.equal(deletedWarehouseCount.data.count, 2);
+                assert.equal(deletedWarehouseCount.count, 2);
 
                 // Assert that only one record remains
                 const remainingWarehouseCount = (await prisma.warehouse.findMany({})).length;
@@ -344,17 +355,17 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
             it('does not delete if match not found', async function() {
 
                 // Get a new ID for a new record
-                const newID = await utilities.getUniqueID(prisma.warehouse);
+                const newID = await testUtilities.getUniqueID(prisma.warehouse);
 
                 // Try to Kill it (will not error)
-                const response = await axios.delete(testEndpoint, {
+                const response = (await axios.delete(testEndpoint, {
                     data: {
                         id: newID
                     }
-                });
+                })).data;
 
                 // Assert that single record was deleted
-                assert.equal(response.data.count, 0);
+                assert.equal(response.count, 0);
 
             });
 
@@ -375,7 +386,7 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
                 let postWarehouse = utilities.cloneJSON(dummyWarehouses[2]);
 
                 // Now try to post overwriting this resource
-                await utilities.assertThrowsAsync(async () => {
+                await testUtilities.assertThrowsAsync(async () => {
 
                     // Act: try to post a new record using the dummy warehouse and duplicated id
                     // Here we must appropriately compile the URL with PATH PARAMETERS and QUERY PARAMETERS
@@ -384,14 +395,13 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
                         params: querystring.stringify(postWarehouse)
                     });
 
-                }, /status code 500/);
+                }, /status code 400/); // 'Bad Request'
 
             });
 
             // 'Using PATH PARAMETER - POST - Create a new Warehouse'
             // not possible using Path Parameter and this route as resource must already exist
             // If no ID provided we will be routed to the postWarehouseFromBody controller function
-
 
         }); // End of 'POST'
 
@@ -400,7 +410,7 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
             it('Updates existing Warehouse', async function () {
 
                 // Get a new ID for a new record
-                const newID = await utilities.getUniqueID(prisma.warehouse);
+                const newID = await testUtilities.getUniqueID(prisma.warehouse);
 
                 // Create a warehouse to attempt to put
                 let putWarehouse = utilities.cloneJSON(dummyWarehouses[2]);
@@ -451,19 +461,19 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
 
                 const existingWarehouses = await prisma.warehouse.findMany({});
 
-                const response = await axios.get(testEndpoint + existingWarehouses[0].id);
+                const response = (await axios.get(testEndpoint + existingWarehouses[0].id)).data;
 
-                assert.equal(response.data.id, existingWarehouses[0].id);
-                assert.equal(response.data.description, existingWarehouses[0].description);
+                assert.equal(response.id, existingWarehouses[0].id);
+                assert.equal(response.description, existingWarehouses[0].description);
 
             });
 
             it('returns 404 if ID not valid', async function() {
 
                 // Get a new ID for a new record
-                const newID = await utilities.getUniqueID(prisma.warehouse);
+                const newID = await testUtilities.getUniqueID(prisma.warehouse);
 
-                await utilities.assertThrowsAsync(async () => {
+                await testUtilities.assertThrowsAsync(async () => {
                     await axios.get(testEndpoint + newID);
                 }, /status code 404/);
 
@@ -479,15 +489,14 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
                 const existingWarehouseID = (await prisma.warehouse.findMany({}))[0].id;
 
                 // Kill it
-                const response = await axios.delete(testEndpoint + existingWarehouseID);
+                const response = (await axios.delete(testEndpoint + existingWarehouseID)).data;
 
                 // Assert that single record was deleted
-                assert.equal(response.status, 200);
-                assert.equal(response.data.id, existingWarehouseID);
+                assert.equal(response.id, existingWarehouseID);
 
                 // Also assert that we cannot find that record anymore
                 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
-                await utilities.assertThrowsAsync(async () => {
+                await testUtilities.assertThrowsAsync(async () => {
                     await prisma.warehouse.findUnique({
                         where: { id: existingWarehouseID }
                     });
@@ -498,10 +507,10 @@ describe('API Test Warehouse Endpoint: ./api/warehouses/', function() {
             it('does not delete if match not found', async function() {
 
                 // Get a new ID for a new record
-                const newID = await utilities.getUniqueID(prisma.warehouse);
+                const newID = await testUtilities.getUniqueID(prisma.warehouse);
 
                 // Try to Kill it
-                await utilities.assertThrowsAsync(async () => {
+                await testUtilities.assertThrowsAsync(async () => {
                     const response = await axios.delete(testEndpoint + newID);
                 }, /404/);
 

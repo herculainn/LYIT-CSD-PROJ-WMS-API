@@ -1,4 +1,4 @@
-exports.dummyWarehouses = [
+exports.warehouses = [
 
     // https://www.lyit.ie/Baile
     {

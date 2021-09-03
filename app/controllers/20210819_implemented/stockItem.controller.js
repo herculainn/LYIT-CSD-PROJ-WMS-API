@@ -1,18 +1,15 @@
-// Convenience module to interpret exceptions raised by the prisma client
+const {PrismaClient} = require('@prisma/client');
+const prisma = new PrismaClient({
+    rejectOnNotFound: true
+});
+
+const utilities = require("../utils/validation");
 const prismaException = require("../utils/prismaException");
-
 const models = require("../models/pseudo.models");
-const utilities = require("../utils/utils");
-
-// For generating/interpreting URLs with Query Strings
-const querystring = require("querystring");
-
-// Get Prisma Client
-const prisma = require('../../client').prismaClient();
 
 exports.getStockItemFromParams = async function (req, res) {
     try {
-        let tmpId = req.params.id;
+        let tmpId = utilities.validateID(req.params.id);
 
         const resStockItem = await prisma.stockItem.findUnique({
             where: {
@@ -31,6 +28,8 @@ exports.getStockItemFromParams = async function (req, res) {
 
 exports.getStockItemFromBody = async function (req, res) {
     try {
+        if (req.body.id) req.body.id = utilities.validateID(req.body.id);
+
         const resStockItem = await prisma.stockItem.findMany({
             where: req.body,
             include: {
@@ -47,7 +46,7 @@ exports.getStockItemFromBody = async function (req, res) {
 exports.postStockItemFromParams = async function (req, res) {
     try {
         let newStockItem = {};
-        if (req.params.id) newStockItem.id = req.params.id;
+        if (req.params.id) newStockItem.id = utilities.validateID(req.params.id);
         models.buildStockItem(req.query, newStockItem);
 
         const resStockItem = await prisma.stockItem.create({
@@ -62,6 +61,8 @@ exports.postStockItemFromParams = async function (req, res) {
 
 exports.postStockItemFromBody = async function(req, res) {
     try {
+        if (req.body.id) req.body.id = utilities.validateID(req.body.id);
+
         const resStockItem = await prisma.stockItem.create({
             data: req.body
         });
@@ -75,7 +76,7 @@ exports.postStockItemFromBody = async function(req, res) {
 exports.putStockItemFromParams = async function (req, res) {
     try {
         let updStockItem = {};
-        if (req.params.id) updStockItem.id = req.params.id;
+        if (req.params.id) updStockItem.id = utilities.validateID(req.params.id);
         models.buildStockItem(req.query, updStockItem);
 
         const resStockItem = await prisma.stockItem.upsert({
@@ -94,6 +95,8 @@ exports.putStockItemFromParams = async function (req, res) {
 
 exports.putStockItemFromBody = async function(req, res) {
     try {
+        req.body.id = utilities.validateID(req.body.id);
+
         const resStockItem = await prisma.stockItem.upsert({
             where: { // only unique fields
                 id: req.body.id
@@ -110,7 +113,7 @@ exports.putStockItemFromBody = async function(req, res) {
 
 exports.deleteStockItemFromParams = async function(req, res) {
     try {
-        let tmpId = req.params.id;
+        let tmpId = utilities.validateID(req.params.id);
 
         const resStockItem = await prisma.stockItem.delete({
             where: {
@@ -126,6 +129,8 @@ exports.deleteStockItemFromParams = async function(req, res) {
 
 exports.deleteStockItemFromBody = async function(req, res) {
     try {
+        if (req.body.id) req.body.id = utilities.validateID(req.body.id);
+
         const resStockItem = await prisma.stockItem.deleteMany({
             where: req.body
         });

@@ -1,183 +1,214 @@
 const assert = require('assert'); // For testing assertions
 const axios = require('axios'); // HTTP client
+const querystring = require("querystring"); // For generating/interpreting URLs
 
-const testEntities = require("./utils/test.entities");
-const utilities = require('./utils/test.utils');
+// Our own global functions that will be of use to all test units
+const testUtilities = require("./utils/test.utils");
+const utilities = require("../app/utils/utils");
+
+// A list of prebuilt warehouses and binLocations in JSON for use during testing
+const dummyStockItems = require('./dummy/stockItem.dummy').stockItems;
+const dummyBinLocations = require('./dummy/binLocation.dummy').binLocations;
+const dummyWarehouses = require('./dummy/warehouse.dummy').warehouses;
+
+// Get the Prisma Client
+const prisma = require('../client').prismaClient({
+    caller: "stockItem.test.js",
+    db: {
+        url: process.env.DATABASE_URL
+    }
+});
 
 require('../'); // Start the API server
 
-// TODO: Change database to TEST database??
+// The Endpoint for testing
+const testEndpoint = 'http://localhost:' + process.env.PORT + '/api/stockitems/';
 
 describe('API Test Endpoint: ./api/stockitems/', function() {
 
-    let testEndpoint = 'http://localhost:24326/api/stockitems/';
-    let testStockItem = JSON.parse(JSON.stringify(testEntities.stockItem.json));
-    let testPutStockItem;
+    beforeEach(async () => {
+        // Seed test records in the database
 
-    beforeEach(() => {
+        // Delete existing records
+        await testUtilities.cleanTables(prisma);
 
-        // TODO: Before each test should we prepare the database?
+        // Create items
+        let seedStockItems = [
+            utilities.cloneJSON(dummyStockItems[0]), // 'NVIDIA'
+            utilities.cloneJSON(dummyStockItems[1])  // Carrying the Fire
+        ];
 
-        // Wipe database
-        // Populate with some prebuild data?
+        await prisma.stockItem.createMany({
+            data: seedStockItems
+        });
 
     });
 
-    describe('Using Body Data', function() {
+    describe('Initial Database', function() {
 
-        describe('Initial Testing', function() {
-            it('There should be no existing stockItem', async function () {
-                const response = await axios.get(testEndpoint);
-                console.log(response.data);
+        it('beforeEach() has added records to stockItems table', async function() {
 
-                assert.equal(response.data.length, 0);
-            });
-        }); // 'Initial Testing'
+            // Confirm expected records have been created
+            const existingStockItems = await prisma.stockItem.findMany({});
+
+            // Assert that only expected number of items exist
+            assert.equal(existingStockItems.length, 2);
+
+        });
+
+        it('beforeEach() had removed all records before having added those new records', async function() {
+            // Repeat the same test; thus ensuring that the two entities simply been added twice
+            const existingStockItems = await prisma.stockItem.findMany({});
+            assert.equal(existingStockItems.length, 2);
+        });
+
+    }); // 'Initial Database'
+
+    describe('Using REQUEST BODY', function() {
 
         describe('POST', function() {
 
             it('Create a new StockItem', async function () {
-                const response = await axios.post(testEndpoint, testStockItem);
-                console.log(response.data);
+                const preExistingStockItemCount = (await prisma.stockItem.findMany({})).length;
+                await axios.post(testEndpoint, dummyStockItems[2]); // Last Man On The Moon
 
-                assert.equal(response.data.description, testStockItem.description);
-
-                // Update test instance with new IDs for later
-                // TODO: This undermines UNIT test?
-                testStockItem = response.data;
+                const postExistingStockItemCount = (await prisma.stockItem.findMany({})).length;
+                assert.equal(preExistingStockItemCount, postExistingStockItemCount - 1);
             });
 
             it('Cannot overwrite existing stockItem', async function () {
-                await utilities.assertThrowsAsync(async () => {
-                    await axios.post(testEndpoint, {
-                        id: testStockItem.id, // ID from previous
-                        ean: testEntities.stockItem.correctEan
-                    });
-                }, /status code 500/);
+                const existingStockItem = (await prisma.stockItem.findMany({}))[0];
+                let postStockItem = utilities.cloneJSON(dummyStockItems[2]); // Last Man On The Moon
+                postStockItem.id = existingStockItem.id;
+
+                await testUtilities.assertThrowsAsync(async () => {
+                    await axios.post(testEndpoint, postStockItem); // "Unique constraint failed on the {constraint}"
+                }, /status code 400/); // 'Bad Request'
             });
+
+
+            // Stock Items don't have a direct connection to Bin Location
+            // There is a many-to-many relationship - we need to create that association..
+
+            it('Create and connect to existing bin location', async function () {
+                let existingItemLocCount = (await prisma.stockItemBinLocationCount.findMany({})).length;
+
+                // Create a warehouse directly using prisma client
+                let newWarehouse = utilities.cloneJSON(dummyWarehouses[0]);
+                let existingWarehouse = await prisma.warehouse.create({
+                    data: newWarehouse
+                }); // 'LYIT'
+
+                // Create a binlocation directly using prisma client
+                let newBinLocation = utilities.cloneJSON(dummyBinLocations[0]); // 'BinLocation WH001.A'
+                newBinLocation.warehouse = {
+                    connect: {
+                        id: existingWarehouse.id
+                    }
+                };
+                let existingBinLocation = await prisma.binLocation.create({ data: newBinLocation});
+
+                // Finally create the stockitem using AXIOS to test the application
+                let newStockItem = utilities.cloneJSON(dummyStockItems[2]); // Last Man On The Moon
+                newStockItem.stockItemCounts = {
+                    create: { // create the relationship table instance
+                        binLocation: {
+                            connect: { // link to the binLocation
+                                id: existingBinLocation.id
+                            }
+                        },
+                        stockItemCount: 0 // required for the rel table
+                    }
+                }
+                //let existingStockItem = await prisma.stockItem.create({ data: newStockItem});
+                await axios.post(testEndpoint, newStockItem);
+
+                let updatedItemLocCount = (await prisma.stockItemBinLocationCount.findMany({})).length;
+                assert.equal(updatedItemLocCount, existingItemLocCount + 1);
+            });
+
 
         }); // 'POST'
 
         describe('PUT', function() {
 
             it('Updates existing StockItem', async function () {
-                testPutStockItem = JSON.parse(JSON.stringify(testStockItem));
-                testPutStockItem.description = testEntities.stockItem.correctDescription;
+                const existingStockItemId = (await prisma.stockItem.findMany({}))[0].id; // 'NVIDIA'
+                let putStockItem = utilities.cloneJSON(dummyStockItems[2]); // Last Man On The Moon
+                putStockItem.id = existingStockItemId;
 
-                const response = await axios.put(testEndpoint, testPutStockItem);
-                console.log(response.data);
-
-                assert.equal(response.data.description, testEntities.stockItem.correctDescription);
+                const resStockItem = (await axios.put(testEndpoint, putStockItem)).data;
+                assert.equal(resStockItem.description, putStockItem.description);
             });
 
             it('Creates new StockItem if new id is used', async function () {
-                testPutStockItem.id = testPutStockItem.id + 1;
-                testPutStockItem.ean = testEntities.stockItem.correctEan;
-                testPutStockItem.upc = testEntities.stockItem.correctUpc;
+                const newID = await testUtilities.getUniqueID(prisma.stockItem);
 
-                const response = await axios.put(testEndpoint, testPutStockItem);
-                console.log(response.data);
+                let putStockItem = utilities.cloneJSON(dummyStockItems[2]); // Last Man On The Moon
+                putStockItem.id = newID;
 
-                assert.equal(response.data.id, testStockItem.id + 1);
-                assert.equal(response.data.ean, testEntities.stockItem.correctEan);
-                assert.equal(response.data.upc, testEntities.stockItem.correctUpc);
+                await axios.put(testEndpoint, putStockItem);
             });
 
             it('Error if no ID is provided', async function () {
-                delete testPutStockItem.id;
-
-                await utilities.assertThrowsAsync(async () => {
-                    await axios.put(testEndpoint, testPutStockItem);
-                }, /status code 500/);
+                await testUtilities.assertThrowsAsync(async () => {
+                    await axios.put(testEndpoint, dummyStockItems[2]); // Last Man On The Moon
+                }, /status code 400/);
             });
 
         }); // 'PUT'
 
         describe('GET', function() {
 
-            it('No parameters returns array of all warehouses', async function() {
-                const response = await axios.get(testEndpoint);
-                console.log(response.data);
-
-                if (response.data.length > 0) {
-                    assert.equal(
-                        response.data
-                            .find(stockItem => stockItem.id === testStockItem.id)
-                            .description,
-                        testPutStockItem.description);
-
-                } else {
-                    // Database not configured for testing - fail the test to correct this
-                    assert.fail("No stockItem records available for testing!");
-                }
+            it('No parameters returns array of all stockItems', async function() {
+                const existingStockItems = await prisma.stockItem.findMany({});
+                const resStockItems = (await axios.get(testEndpoint)).data;
+                assert.equal(resStockItems.length, existingStockItems.length);
             });
 
-            it('PATH PARAMETER returns StockItem by ID', async function() {
-                const response = await axios.get(testEndpoint + testStockItem.id);
-                console.log(response.data);
-
-                assert.equal(response.data.id, testStockItem.id);
-            });
-
-            it('PATH PARAMETER returns error if ID not valid', async function() {
-                await utilities.assertThrowsAsync(async () => {
-                    await axios.get(testEndpoint + testEntities.stockItem.errorID);
-                }, /status code 404/);
-            });
-
-            it('REQUEST BODY returns single StockItem matching unique terms', async function() {
-                const response = await axios.get(testEndpoint, {
+            it('ID as a string is automatically converted', async function() {
+                const existingStockItem = (await prisma.stockItem.findMany({}))[0];
+                const existingStockItemID = existingStockItem.id;
+                const resStockItem = (await axios.get(testEndpoint, {
                     data: {
-                        id: testStockItem.id
+                        id: existingStockItemID.toString()
                     }
-                });
-                console.log(response.data);
-
-                assert.equal(response.data.length, 1);
-            });
-
-            it('REQUEST BODY returns multiple StockItem matching non-unique terms', async function() {
-                const response = await axios.get(testEndpoint, {
-                    data: {
-                        shelf: testEntities.stockItem.correctShelf
-                    }
-                });
-                console.log(response.data);
-
-                assert.equal(response.data.length, 2); // 2 - from POST and PUT tests
-            });
-
-            it('REQUEST BODY returns empty array if request body data has no matches', async function() {
-                const response = await axios.get(testEndpoint, {
-                    data: {
-                        description: testEntities.stockItem.errorDescription
-                    }
-                });
-                console.log(response.data);
-
-                assert.equal(response.data.length, 0);
+                })).data;
+                assert.equal(resStockItem.length, 1);
+                assert.equal(resStockItem[0].description, existingStockItem.description);
             });
 
         }); // 'GET'
 
         describe('DELETE', function() {
 
-            it('Deletes multiple records', async function() {
-                const response = await axios.delete(testEndpoint, {
+            it('Deletes by given Id', async function() {
+                const existingStockItems = await prisma.stockItem.findMany({});
+
+                const deleteCount = (await axios.delete(testEndpoint, {
                     data: {
-                        description: testEntities.stockItem.correctDescription
+                        id: existingStockItems[1].id
                     }
-                });
-                console.log(response.data);
+                })).data.count;
+
+                const remainingStockItems = await prisma.stockItem.findMany({});
 
                 // Prisma delete will return the count of delete records only
-                assert.equal(response.data.count, 2);
+                assert.equal(existingStockItems.length, remainingStockItems.length + deleteCount);
             });
+
+            // TODO: What happens to relationships after delete?
 
         }); // 'DELETE'
 
 
-    }); // 'Using Body Parameters'
+    }); // 'Using REQUEST BODY'
+
+    describe('Using PATH PARAMETER and QUERY STRING', function() {
+
+        // TODO: implement some tests against Path Parameters and Query Strings
+
+    }); // 'Using PATH PARAMETER and QUERY STRING'
 
 }); // 'API Test Endpoint: ./api/stockitems/'
 

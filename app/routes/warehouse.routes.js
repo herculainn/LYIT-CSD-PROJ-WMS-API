@@ -10,45 +10,12 @@ module.exports = (app) => {
         })
     });
 
-    // TODO: COMMENT WITH SOURCES
-    // WIP: Have moved the client! now update all controllers and tests to use it!
-    // DISTRACT WITH: Update warehouse/unique files with detailed tech commentary
-    // NEXT: TEST BINLOCATION vs STOCKITEM relationship database!!
-    // ALSO: DRILL DOWN?
-    //   /api/warehouses/<thisOne>/binlocations/....
-    //   /api/warehouses/<thisOne>/binlocations/<thisOne>/StockItems/.....
-    //   /api/warehouses/<thisOne>/binlocations/<thisOne>/StockItems/<thisOne>
-    // PENULTIMATELY: New endpoints to create movements? aaaaand tests for those :(
-    // FINALLY: GET GITHUB CI running.. ooo
-
-    /* TODO: DOCUMENTATION
-        *
-        * Documentation Example:
-        *
-        * GET A WAREHOUSE
-        * GET /api/warehouses/{id}
-        *
-        * - REQUEST
-        *
-        * - - PATH PARAMETERS
-        *
-        *     id: integer
-        *     "The ID od the warehouse"
-        *
-        * - - QUERY PARAMETERS
-        *
-        *     description: string (optional)
-        *     "The Description of the warehouse"
-        *
-        *     postcode: string (optional)
-        *     "The address of the warehouse"
-        *
-     */
-
     // The REST Verb determines the action to perform; GET, POST, PUT, DELETE.
     // ":id" - PATH PARAMETERS used to identify an entity to perform an action against.
     // "?key=value" - QUERY PARAMETERS can be used to provide additional information for these actions.
     // "/" - If no Path Parameter is provided, the API will read the REQUEST BODY to determine useful values.
+    // https://axios-http.com/docs/urlencoded
+    // https://nodejs.org/api/querystring.html
 
     // RETRIEVE
     router.get('/', warehouseController.getWarehouseFromBody);
@@ -65,6 +32,19 @@ module.exports = (app) => {
     // DELETE
     router.delete('/', warehouseController.deleteWarehouseFromBody);
     router.delete('/:id', warehouseController.deleteWarehouseFromParams);
+
+    // TODO:
+    //   Here we can add drill-down routes to perform an action on a selected entity.
+    //
+    //   for example: "delete warehouse 123456789":
+    //   https://localhost:8080/api/warehouses/123456789/delete
+    //
+    //   "StockItem 6789 at BinLocation 12345 has a StockItemCount of 999"
+    //   https://localhost:8080/api/stockitem/6789/binLocations/12345?stockItemCount=999
+    //
+    //   The following drill-down from top-to-bottom would result in the same transaction:
+    //   "In Warehouse 123456789, find BinLocation 1235, and set StockItem 6789's StockItemCount to 999"
+    //   https://localhost:8080/api/warehouses/123456789/binlocations/12345/stockitem/6789?stockItemCount=999
 
     app.use('/api/warehouses', router);
 }

@@ -1,0 +1,194 @@
+{
+	"info": {
+		"_postman_id": "4211d916-6b99-44f7-a676-eb83fb8baf09",
+		"name": "LYIT-CSD-PROJ-WMS-API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Warehouse",
+			"item": [
+				{
+					"name": "Get All Warehouses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:24326/api/warehouses",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "24326",
+							"path": [
+								"api",
+								"warehouses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific Warehouse",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:24326/api/warehouses/500",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "24326",
+							"path": [
+								"api",
+								"warehouses",
+								"500"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific Warehouse BODY",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"id\": 500\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:24326/api/warehouses/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "24326",
+							"path": [
+								"api",
+								"warehouses",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Post new warehouse",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:24326/api/warehouses?description=House&postcode=nocode",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "24326",
+							"path": [
+								"api",
+								"warehouses"
+							],
+							"query": [
+								{
+									"key": "description",
+									"value": "House"
+								},
+								{
+									"key": "postcode",
+									"value": "nocode"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Post new warehouse BODY",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"description\": \"Aidan's House\",\r\n    \"postcode\": \"NoCode\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:24326/api/warehouses/",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "24326",
+							"path": [
+								"api",
+								"warehouses",
+								""
+							],
+							"query": [
+								{
+									"key": "description",
+									"value": "AidanHouse",
+									"disabled": true
+								},
+								{
+									"key": "postcode",
+									"value": "nocode",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Put update warehouse",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": null
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Warehouse",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": null
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "BinLocation",
+			"item": []
+		},
+		{
+			"name": "StockItem",
+			"item": []
+		},
+		{
+			"name": "StockCount",
+			"item": []
+		},
+		{
+			"name": "StockAdjustment",
+			"item": []
+		}
+	]
+}

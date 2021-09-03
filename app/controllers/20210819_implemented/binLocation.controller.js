@@ -1,14 +1,11 @@
-// Convenience module to interpret exceptions raised by the prisma client
+const {PrismaClient} = require('@prisma/client');
+const prisma = new PrismaClient({
+    rejectOnNotFound: true
+});
+
+const utilities = require("../utils/validation");
 const prismaException = require("../utils/prismaException");
-
 const models = require("../models/pseudo.models");
-const utilities = require("../utils/utils");
-
-// For generating/interpreting URLs with Query Strings
-const querystring = require("querystring");
-
-// Get Prisma Client
-const prisma = require('../../client').prismaClient();
 
 /* // Require the request to be structured for Prisma:
 
@@ -50,7 +47,7 @@ const prisma = require('../../client').prismaClient();
 
 exports.getBinLocationFromParams = async function (req, res) {
     try {
-        let tmpId = req.params.id;
+        let tmpId = utilities.validateID(req.params.id);
 
         const resBinLocation = await prisma.binLocation.findUnique({
             where: {
@@ -64,13 +61,14 @@ exports.getBinLocationFromParams = async function (req, res) {
         return res.json(resBinLocation);
 
     } catch (e) {
-        return res.status(prismaException.httpStatus(e))
-            .json(prismaException.generateReturnJSON(e));
+        return res.status(prismaException.httpStatus(e)).json(prismaException.generateReturnJSON(e));
     }
 };
 
 exports.getBinLocationFromBody = async function (req, res) {
     try {
+        if (req.body.id) req.body.id = utilities.validateID(req.body.id);
+
         const resBinLocations = await prisma.binLocation.findMany({
             where: req.body,
             include: {
@@ -81,15 +79,14 @@ exports.getBinLocationFromBody = async function (req, res) {
         res.json(resBinLocations);
 
     } catch (e) {
-        return res.status(prismaException.httpStatus(e))
-            .json(prismaException.generateReturnJSON(e));
+        return res.status(prismaException.httpStatus(e)).json(prismaException.generateReturnJSON(e));
     }
 };
 
 exports.postBinLocationFromParams = async function (req, res) {
     try {
         let newBinLocation = {};
-        if (req.params.id) newBinLocation.id = req.params.id;
+        if (req.params.id) newBinLocation.id = utilities.validateID(req.params.id);
         models.buildBinLocation(req.query, newBinLocation);
 
         const resBinLocation = await prisma.binLocation.create({
@@ -99,13 +96,14 @@ exports.postBinLocationFromParams = async function (req, res) {
         return res.status(201).json(resBinLocation);
 
     } catch (e) {
-        return res.status(prismaException.httpStatus(e))
-            .json(prismaException.generateReturnJSON(e));
+        return res.status(prismaException.httpStatus(e)).json(prismaException.generateReturnJSON(e));
     }
 };
 
 exports.postBinLocationFromBody = async function(req, res) {
     try {
+        if (req.body.id) req.body.id = utilities.validateID(req.body.id);
+
         const resBinLocation = await prisma.binLocation.create({
             data: req.body
         });
@@ -113,15 +111,14 @@ exports.postBinLocationFromBody = async function(req, res) {
         return res.status(201).json(resBinLocation); // 'Created'
 
     } catch (e) {
-        return res.status(prismaException.httpStatus(e))
-            .json(prismaException.generateReturnJSON(e));
+        return res.status(prismaException.httpStatus(e)).json(prismaException.generateReturnJSON(e));
     }
 };
 
 exports.putBinLocationFromParams = async function (req, res) {
     try {
         let updBinLocation = {};
-        if (req.params.id) updBinLocation.id = req.params.id;
+        if (req.params.id) updBinLocation.id = utilities.validateID(req.params.id);
         models.buildBinLocation(req.query, updBinLocation);
 
         const resBinLocation = await prisma.binLocation.upsert({
@@ -135,51 +132,32 @@ exports.putBinLocationFromParams = async function (req, res) {
         return res.json(resBinLocation);
 
     } catch (e) {
-        return res.status(prismaException.httpStatus(e))
-            .json(prismaException.generateReturnJSON(e));
+        return res.status(prismaException.httpStatus(e)).json(prismaException.generateReturnJSON(e));
     }
 };
 
 exports.putBinLocationFromBody = async function(req, res) {
     try {
-        // Prepare a new JSON object for create
-        const createBinLocation = utilities.cloneJSON(req.body);
-        // Must have warehouse which may not have been part of the call
-        if (!createBinLocation.warehouse) {
-            const existingBinLocation = prisma.binLocation.findUnique({ where: {
-                id: createBinLocation.id
-            }});
-            createBinLocation.warehouse = {
-                connect: existingBinLocation.warehouseId
-            };
-        }
-        // cannot have id for create
-        if (createBinLocation.id) delete createBinLocation.id;
-
-        // Prepare a new JSON object for update
-        const updateBinLocation = utilities.cloneJSON(req.body);
-        // Must not have warehouse, only warehouseId
-        if (updateBinLocation.warehouse) delete updateBinLocation.warehouse;
+        req.body.id = utilities.validateID(req.body.id);
 
         const resBinLocation = await prisma.binLocation.upsert({
             where: { // only unique fields
                 id: req.body.id
             },
-            update: updateBinLocation,
-            create: createBinLocation
+            update: req.body,
+            create: req.body
         });
 
         return res.json(resBinLocation);
 
     } catch (e) {
-        return res.status(prismaException.httpStatus(e))
-            .json(prismaException.generateReturnJSON(e));
+        return res.status(prismaException.httpStatus(e)).json(prismaException.generateReturnJSON(e));
     }
 };
 
 exports.deleteBinLocationFromParams = async function(req, res) {
     try {
-        let tmpId = req.params.id;
+        let tmpId = utilities.validateID(req.params.id);
 
         const resBinLocation = await prisma.binLocation.delete({
             where: {
@@ -190,13 +168,14 @@ exports.deleteBinLocationFromParams = async function(req, res) {
         return res.json(resBinLocation);
 
     } catch (e) {
-        return res.status(prismaException.httpStatus(e))
-            .json(prismaException.generateReturnJSON(e));
+        return res.status(prismaException.httpStatus(e)).json(prismaException.generateReturnJSON(e));
     }
 };
 
 exports.deleteBinLocationFromBody = async function(req, res) {
     try {
+        if (req.body.id) req.body.id = utilities.validateID(req.body.id);
+
         const resBinLocation = await prisma.binLocation.deleteMany({
             where: req.body
         });
@@ -204,7 +183,6 @@ exports.deleteBinLocationFromBody = async function(req, res) {
         return res.json(resBinLocation);
 
     } catch (e) {
-        return res.status(prismaException.httpStatus(e))
-            .json(prismaException.generateReturnJSON(e));
+        return res.status(prismaException.httpStatus(e)).json(prismaException.generateReturnJSON(e));
     }
 };

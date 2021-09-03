@@ -30,31 +30,31 @@ exports.prismaClient = (aConfig) => {
 
         // For debugging: print caller to console
         if (aConfig.caller) {
-            console.log(aConfig.caller + ' wants a Prisma Client!');
+            //console.log(aConfig.caller + ' wants a Prisma Client!');
         } else {
-            console.log('We need a Prisma Client!');
+            //console.log('We need a Prisma Client!');
         }
 
         // For debugging: print the URL being used to the console
         if (aConfig.db.url) {
-            console.log(' - at this URL: ' + aConfig.db.url);
+            //console.log(' - at this URL: ' + aConfig.db.url);
         } else {
-            console.log(' - at default URL');
+            //console.log(' - at default URL');
         }
 
         if (aConfig.db) prismaConfig.datasources = { db: aConfig.db };
 
     } else {
-        console.log('Attempt to get a Prisma Client without configuration!');
+        //console.log('Attempt to get a Prisma Client without configuration!');
     }
 
     // If the client has already be instantiated
     // then send it back for re-use!
     if (cacheClient) {
-        console.log(' - Prisma Client already exists, using it!');
+        //console.log(' - Prisma Client already exists, using it!');
         return cacheClient;
     } else {
-        console.log(' - Proceeding to create new Prisma Client!');
+        //console.log(' - Proceeding to create new Prisma Client!');
     }
 
     // Otherwise, create a new client using the configuration prepared
@@ -67,15 +67,15 @@ exports.prismaClient = (aConfig) => {
         // params.action tells us what Prisma API function we are using (eg deleteMany, findUnique..)
         // params.args contains any configuration passed to that action/function
 
-        console.log('Prisma call to: ' + params.model + '.' + params.action);
+        //console.log('Prisma call to: ' + params.model + '.' + params.action);
 
         // This middleware will be used to validate any ID before passing the call forward using next()
-        const validateModels = ['warehouse'];
-        const validateActions = ['findunique', 'findmany', 'upsert', 'create', 'delete'];
+        const validateModels = ['warehouse', 'binlocation', 'stockitem']; // must be lowercase
+        const validateActions = ['findunique', 'findmany', 'upsert', 'create', 'delete']; // must be lowercase
 
         // check that there will be something to validate first
         if (params.args) {
-            console.log(' - params.args: ' + JSON.stringify(params.args));
+            //console.log(' - params.args: ' + JSON.stringify(params.args));
 
             // check that we intended to validate on this model
             if (validateModels.includes(params.model.toLowerCase())) {
@@ -116,6 +116,7 @@ exports.prismaClient = (aConfig) => {
         // Allow the next step to run (original call if no other middleware used)
         const result = await next(params)
 
+        //console.log(' - Result: ' + JSON.stringify(result));
         // Here we could perform any other changes to the result before we
         // Return the result back through the stack
         return result

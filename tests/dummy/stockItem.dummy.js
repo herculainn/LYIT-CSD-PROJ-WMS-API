@@ -1,6 +1,4 @@
-import binLocations from "./binLocation.dummy";
-
-const stockItems = [
+exports.stockItems = [
 
     // https://eandata.com/lookup/0812674024509/
     {
@@ -29,5 +27,3 @@ const stockItems = [
 
 
 ];
-
-export default binLocations;

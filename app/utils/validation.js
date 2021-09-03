@@ -1,6 +1,6 @@
 // This module exports functions to assist with Validation
 
-const validateID = (aId) => {
+exports.validateID = (aId) => {
     // Convert the given value to an integer, ensuring the integrity of the value.
     // Throw an exception if the value cannot be safely converted.
     // Using "==" and not "===" as we will be comparing different types
@@ -10,7 +10,3 @@ const validateID = (aId) => {
         throw new Error("ID is not an integer.");
     }
 }
-
-module.exports = {
-    validateID
-};
