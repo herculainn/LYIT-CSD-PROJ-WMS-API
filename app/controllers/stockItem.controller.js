@@ -6,6 +6,7 @@ const utilities = require("../utils/utils");
 
 // For generating/interpreting URLs with Query Strings
 const querystring = require("querystring");
+const {validateID} = require("../utils/validation");
 
 // Get Prisma Client
 const prisma = require('../../client').prismaClient();
@@ -18,6 +19,25 @@ exports.getStockItemFromParams = async function (req, res) {
             where: {
                 id: tmpId
             },
+            include: {
+                stockItemCounts: true
+            }
+        });
+
+        return res.json(resStockItem);
+    } catch (e) {
+        return res.status(prismaException.httpStatus(e)).json(prismaException.generateReturnJSON(e));
+    }
+};
+
+exports.getByBinLocationId = async function (req, res) {
+    // TODO: Refactor to re-use code!
+    try {
+        let searchTerms = {};
+        if (req.params.id) searchTerms.binLocationId = validateID(req.params.id);
+
+        const resStockItem = await prisma.stockItem.findMany({
+            where: searchTerms,
             include: {
                 stockItemCounts: true
             }

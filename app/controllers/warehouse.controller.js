@@ -132,6 +132,7 @@ exports.postWarehouseFromBody = async function(req, res) {
 
 exports.putWarehouseFromParams = async function (req, res) {
     try {
+        console.log("put param");
         let updWarehouse = {id: req.params.id};
         models.buildWarehouse(querystring.decode(req.query[0]), updWarehouse);
 
@@ -153,6 +154,7 @@ exports.putWarehouseFromParams = async function (req, res) {
 
 exports.putWarehouseFromBody = async function(req, res) {
     try {
+        console.log(req.body);
         const resWarehouse = await prisma.warehouse.upsert({
             where: { // only unique fields
                 id: req.body.id

@@ -6,6 +6,7 @@ const utilities = require("../utils/utils");
 
 // For generating/interpreting URLs with Query Strings
 const querystring = require("querystring");
+const {validateID} = require("../utils/validation");
 
 // Get Prisma Client
 const prisma = require('../../client').prismaClient();
@@ -50,12 +51,69 @@ const prisma = require('../../client').prismaClient();
 
 exports.getBinLocationFromParams = async function (req, res) {
     try {
-        let tmpId = req.params.id;
+        let searchTerms = {};
+        if (req.params.id) searchTerms.id = req.params.id;
 
         const resBinLocation = await prisma.binLocation.findUnique({
-            where: {
-                id: tmpId
-            },
+            where: searchTerms,
+            include: {
+                stockItemCounts: true
+            }
+        });
+
+        return res.json(resBinLocation);
+
+    } catch (e) {
+        return res.status(prismaException.httpStatus(e))
+            .json(prismaException.generateReturnJSON(e));
+    }
+};
+
+exports.getStockItems = async function (req, res) {
+    try {
+
+        // First we need to get the BinLocation and its related records
+        let searchTerms = {};
+        if (req.params.id) searchTerms.id = req.params.id;
+        const relations = (await prisma.binLocation.findUnique({
+            where: searchTerms,
+            include: {
+                stockItemCounts: true
+            }
+        })).stockItemCounts;
+
+        // Then we need to look up the related StockItems
+        // adding them to a list of StockItems to be Returned
+        let returnStockItems = []; // Array...
+        for (let i = 0; i < relations.length; i++) {
+            const iStockItemId = relations[i].stockItemId
+            const iStockItem = await prisma.stockItem.findUnique({
+                where: {
+                    id: iStockItemId
+                },
+                include: {
+                    stockItemCounts: true
+                }
+            });
+            returnStockItems.push(iStockItem);
+        }
+
+        return res.json(returnStockItems);
+
+    } catch (e) {
+        return res.status(prismaException.httpStatus(e))
+            .json(prismaException.generateReturnJSON(e));
+    }
+};
+
+exports.getByWarehouseId = async function(req, res) {
+    // TODO: Refactor to re-use code!
+    try {
+        let searchTerms = {};
+        if (req.params.id) searchTerms.warehouseId = validateID(req.params.id);
+
+        const resBinLocation = await prisma.binLocation.findMany({
+            where: searchTerms,
             include: {
                 stockItemCounts: true
             }
