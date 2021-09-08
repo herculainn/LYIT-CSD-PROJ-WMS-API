@@ -64,6 +64,43 @@ exports.getStockItemFromBody = async function (req, res) {
     }
 };
 
+exports.getBinLocations = async function (req, res) {
+    try {
+
+        // First we need to get the StockItem and its related records
+        let searchTerms = {};
+        if (req.params.id) searchTerms.id = req.params.id;
+        const relations = (await prisma.stockItem.findUnique({
+            where: searchTerms,
+            include: {
+                stockItemCounts: true
+            }
+        })).stockItemCounts;
+
+        // Then we need to look up the related BinLocations
+        // adding them to a list of BinLocations to be Returned
+        let returnBinLocations = []; // Array...
+        for (let i = 0; i < relations.length; i++) {
+            const iBinLocationId = relations[i].stockItemId
+            const iBinLocation = await prisma.stockItem.findUnique({
+                where: {
+                    id: iBinLocationId
+                },
+                include: {
+                    stockItemCounts: true
+                }
+            });
+            returnStockItems.push(iBinLocation);
+        }
+
+        return res.json(returnBinLocations);
+
+    } catch (e) {
+        return res.status(prismaException.httpStatus(e))
+            .json(prismaException.generateReturnJSON(e));
+    }
+};
+
 exports.postStockItemFromParams = async function (req, res) {
     try {
         let newStockItem = {};
