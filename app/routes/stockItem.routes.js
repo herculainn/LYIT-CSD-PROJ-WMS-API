@@ -23,5 +23,9 @@ module.exports = (app) => {
     // BY BINLOCATION
     router.get('/binlocationid/:id', stockItemController.getByBinLocationId);
 
+    // Related Locations
+    // It may be a requirement of a client to retrieve a list of related binLocations
+    router.get('/binLocations/:id', stockItemController.getBinLocations);
+
     app.use('/api/stockitems', router);
 }
