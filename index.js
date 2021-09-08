@@ -10,25 +10,12 @@ const express = require("express");
 const app = express();
 
 // TODO: COMMENT WITH SOURCES
-//     Additional Routes for activity
-//         tests for those Adjustment and Count endpoints
 //     Routes to drill down further
 //         /api/warehouses/<thisOne>/binlocations/....
 //         /api/warehouses/<thisOne>/binlocations/<thisOne>/StockItems/.....
 //         /api/warehouses/<thisOne>/binlocations/<thisOne>/StockItems/<thisOne>
 //     Continuous Integration
 //         GET GITHUB CI running..
-//     And Then...
-//         Document the implementation AND testing for entire API (IN PROGRESS)
-//         Build a client!
-//             Testing
-//             Document implementation and testing
-//                 Include Manual Testing walkthroughs
-//         Rest of Document
-//             Complete the Planning Chapter
-//             Complete conclusion
-//             Complete document tables, figures, references, code pages, etc... etc...
-
 
 // MIDDLEWARE
 // Must be in order of execution
@@ -39,6 +26,18 @@ app.use(express.json()); // parse the JSON received
 app.use((req, res, next) => {
     // console.log("req.params.id: " + req.params.id);
     // console.log("req.body.id: " + req.body.id);
+
+    // Allow same-domain via CORS
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+    res.setHeader("Access-Control-Allow-Headers",
+        "Access-Control-Allow-Headers," +
+        " Origin,Accept," +
+        " X-Requested-With," +
+        " Content-Type," +
+        " Access-Control-Request-Method," +
+        " Access-Control-Request-Headers");
+
     next();
 });
 
